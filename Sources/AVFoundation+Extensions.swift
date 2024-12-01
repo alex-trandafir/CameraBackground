@@ -23,8 +23,7 @@ extension AVCaptureSession {
     }
 
     func addCameraInput(_ position: AVCaptureDevice.Position) {
-//        guard let device = AVCaptureDevice.deviceWithPosition(position) else { return }
-        guard let device = AVCaptureSession.primaryVideoDevice(forPosition: position) else { return }
+        guard let device = AVCaptureDevice.deviceWithPosition(position) else { return }
         if device.hasFlash {
             device.changeFlashMode(.auto)
         }
@@ -40,8 +39,26 @@ extension AVCaptureSession {
             NSLog("Can't access camera")
         }
     }
-    
-    public class func primaryVideoDevice(forPosition position: AVCaptureDevice.Position) -> AVCaptureDevice? {
+
+    func startRunningInBackground() {
+        DispatchQueue.global().async { [weak self] in
+            self?.startRunning()
+        }
+    }
+}
+
+extension AVCaptureDevice.Position {
+    func opposite() -> AVCaptureDevice.Position {
+        switch self {
+        case .front: return .back
+        case .back: return .front
+        default: return self
+        }
+    }
+}
+
+extension AVCaptureDevice {
+    class func deviceWithPosition(_ position: AVCaptureDevice.Position) -> AVCaptureDevice? {
         if #available(iOS 13.0, *) {
             let hasUltraWideCamera: Bool = true
             if hasUltraWideCamera {
@@ -72,31 +89,6 @@ extension AVCaptureSession {
             }
         }
         return discoverySession.devices.first
-    }
-
-    func startRunningInBackground() {
-        DispatchQueue.global().async { [weak self] in
-            self?.startRunning()
-        }
-    }
-}
-
-extension AVCaptureDevice.Position {
-    func opposite() -> AVCaptureDevice.Position {
-        switch self {
-        case .front: return .back
-        case .back: return .front
-        default: return self
-        }
-    }
-}
-
-extension AVCaptureDevice {
-    class func deviceWithPosition(_ position: AVCaptureDevice.Position) -> AVCaptureDevice? {
-        if position != .unspecified, let device = devices(for: AVMediaType.video).first(where: { $0.position == position }) {
-            return device
-        }
-        return AVCaptureDevice.default(for: AVMediaType.video)
     }
 
     func changeFlashMode(_ mode: AVCaptureDevice.FlashMode) {
