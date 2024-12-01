@@ -23,7 +23,8 @@ extension AVCaptureSession {
     }
 
     func addCameraInput(_ position: AVCaptureDevice.Position) {
-        guard let device = AVCaptureDevice.deviceWithPosition(position) else { return }
+//        guard let device = AVCaptureDevice.deviceWithPosition(position) else { return }
+        guard let device = AVCaptureSession.primaryVideoDevice(forPosition: position) else { return }
         if device.hasFlash {
             device.changeFlashMode(.auto)
         }
@@ -38,6 +39,39 @@ extension AVCaptureSession {
         } catch {
             NSLog("Can't access camera")
         }
+    }
+    
+    public class func primaryVideoDevice(forPosition position: AVCaptureDevice.Position) -> AVCaptureDevice? {
+        if #available(iOS 13.0, *) {
+            let hasUltraWideCamera: Bool = true
+            if hasUltraWideCamera {
+                let deviceTypes: [AVCaptureDevice.DeviceType] = [AVCaptureDevice.DeviceType.builtInUltraWideCamera]
+                let discoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: deviceTypes, mediaType: AVMediaType.video, position: position)
+                if (discoverySession.devices.first != nil){
+                    return discoverySession.devices.first
+                }
+            }
+        }
+        var deviceTypes: [AVCaptureDevice.DeviceType] = [AVCaptureDevice.DeviceType.builtInWideAngleCamera]
+        if #available(iOS 11.0, *) {
+            deviceTypes.append(.builtInDualCamera)
+        } else {
+            deviceTypes.append(.builtInDuoCamera)
+        }
+        // prioritize duo camera systems before wide angle
+        let discoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: deviceTypes, mediaType: AVMediaType.video, position: position)
+        for device in discoverySession.devices {
+            if #available(iOS 11.0, *) {
+                if (device.deviceType == AVCaptureDevice.DeviceType.builtInDualCamera) {
+                    return device
+                }
+            } else {
+                if (device.deviceType == AVCaptureDevice.DeviceType.builtInDuoCamera) {
+                    return device
+                }
+            }
+        }
+        return discoverySession.devices.first
     }
 
     func startRunningInBackground() {
